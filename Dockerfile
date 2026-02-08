@@ -1,20 +1,34 @@
-# Dockerfile
-FROM python:3.11-slim
+# Dockerfile - LinkedIn MCP Server for Railway
+# This fixes the font dependency issues
 
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
+
+# Install additional tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir playwright==1.40.0 fastapi==0.104.1 uvicorn==0.24.0
+# Install uv
+RUN pip install --no-cache-dir uv
 
-RUN playwright install chromium
-RUN playwright install-deps chromium
+# Clone and install the MCP server
+RUN git clone https://github.com/stickerdaniel/linkedin-mcp-server.git /app/linkedin-mcp-server
 
-COPY linkedin_scraper.py /app/
+WORKDIR /app/linkedin-mcp-server
 
+# Install with uv
+RUN uv pip install --system -e .
+
+# Set environment
 ENV PORT=8080
+ENV HOST=0.0.0.0
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-CMD ["uvicorn", "linkedin_scraper:app", "--host", "0.0.0.0", "--port", "8080"]
+# The server should be runnable via the installed package
+# Check the actual entry point from the repo
+CMD ["uvicorn", "linkedin_mcp_server.server:mcp.app", "--host", "0.0.0.0", "--port", "8080"]
